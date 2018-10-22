@@ -1,0 +1,38 @@
+---
+- hosts: koji-all-in-one
+  tasks:
+  - name: Add required bundles for koji
+    swupd:
+      name: koji postgresql web-server-basic
+      state: present
+    become: true
+  - name: copy koji-setup scripts
+    copy:
+      src: koji-setup
+      dest: /tmp/
+      owner: "{{ ansible_ssh_user }}"
+      group: "{{ ansible_ssh_user }}"
+  - name: update bootstrap-build file permissions
+    file:
+      path: /tmp/koji-setup/bootstrap-build.sh
+      mode: 0755
+  - name: update deploy-koji file permissions
+    file:
+      path: /tmp/koji-setup/deploy-koji.sh
+      mode: 0755
+  - name: update gencert file permissions
+    file:
+      path: /tmp/koji-setup/gencert.sh
+      mode: 0755
+  - name: run koji deployment
+    command:
+      ./deploy-koji.sh
+    become: true
+    args:
+      chdir: /tmp/koji-setup
+  - name: bootstrap build tags and targets
+    command:
+      ./bootstrap-build.sh
+    become: true
+    args:
+      chdir: /tmp/koji-setup
