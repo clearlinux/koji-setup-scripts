@@ -1,29 +1,17 @@
-#!/usr/bin/env bash
-# Copyright (c) 2018 Intel Corporation
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#!/bin/bash
+# Copyright (C) 2018 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
 
 set -xe
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 source "$SCRIPT_DIR"/parameters.sh
 
-## INSTALL KOJI
-swupd bundle-add koji || true
+# INSTALL KOJI
+swupd bundle-add koji
 
 ## SETTING UP SSL CERTIFICATES FOR AUTHENTICATION
-KOJI_PKI_DIR=/etc/pki/koji
 mkdir -p "$KOJI_PKI_DIR"/{certs,private}
-RANDFILE=$KOJI_PKI_DIR/.rand
+RANDFILE="$KOJI_PKI_DIR"/.rand
 dd if=/dev/urandom of="$RANDFILE" bs=256 count=1
 
 # Certificate generation
@@ -62,7 +50,7 @@ commonName              = supplied
 emailAddress            = optional
 
 [req]
-default_bits            = 1024
+default_bits            = 2048
 default_keyfile         = privkey.pem
 default_md              = sha256
 distinguished_name      = req_distinguished_name
@@ -101,14 +89,18 @@ authorityKeyIdentifier          = keyid:always,issuer:always
 basicConstraints                = CA:true
 EOF
 
-# Generate CA
+# Generate and trust CA
 touch "$KOJI_PKI_DIR"/index.txt
 echo 01 > "$KOJI_PKI_DIR"/serial
 openssl genrsa -out "$KOJI_PKI_DIR"/private/koji_ca_cert.key 2048
 openssl req -subj "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=koji_ca/CN=$KOJI_MASTER_FQDN" -config "$KOJI_PKI_DIR"/ssl.cnf -new -x509 -days 3650 -key "$KOJI_PKI_DIR"/private/koji_ca_cert.key -out "$KOJI_PKI_DIR"/koji_ca_cert.crt -extensions v3_ca
 mkdir -p /etc/ca-certs/trusted
 cp -a "$KOJI_PKI_DIR"/koji_ca_cert.crt /etc/ca-certs/trusted
-clrtrust generate
+while true; do
+	if clrtrust generate; then
+		break
+	fi
+done
 
 # Generate the koji component certificates and the admin certificate and generate a PKCS12 user certificate (for web browser)
 cp "$SCRIPT_DIR"/gencert.sh "$KOJI_PKI_DIR"
@@ -121,37 +113,46 @@ popd
 
 # Copy certificates into ~/.koji for kojiadmin
 useradd kojiadmin
-ADMIN_CERT_DIR=$(getent passwd kojiadmin | cut -d ':' -f 6)/.koji
-mkdir -p "$ADMIN_CERT_DIR"
-cp -f "$KOJI_PKI_DIR"/kojiadmin.pem "$ADMIN_CERT_DIR"/client.crt
-cp -f "$KOJI_PKI_DIR"/koji_ca_cert.crt "$ADMIN_CERT_DIR"/clientca.crt
-cp -f "$KOJI_PKI_DIR"/koji_ca_cert.crt "$ADMIN_CERT_DIR"/serverca.crt
-chown -R kojiadmin:kojiadmin "$ADMIN_CERT_DIR"
+ADMIN_KOJI_DIR="$(echo ~kojiadmin)"/.koji
+mkdir -p "$ADMIN_KOJI_DIR"
+cp -f "$KOJI_PKI_DIR"/kojiadmin.pem "$ADMIN_KOJI_DIR"/client.crt
+cp -f "$KOJI_PKI_DIR"/koji_ca_cert.crt "$ADMIN_KOJI_DIR"/clientca.crt
+cp -f "$KOJI_PKI_DIR"/koji_ca_cert.crt "$ADMIN_KOJI_DIR"/serverca.crt
+chown -R kojiadmin:kojiadmin "$ADMIN_KOJI_DIR"
 
 
 ## POSTGRESQL SERVER
 # Initialize PostgreSQL DB
-mkdir -p /var/lib/pgsql
-chown -R postgres:postgres /var/lib/pgsql
-sudo -u postgres initdb --pgdata /var/lib/pgsql/data
+mkdir -p "$POSTGRES_DIR"
+chown -R "$POSTGRES_USER":"$POSTGRES_USER" "$POSTGRES_DIR"
+if [[ "$POSTGRES_DIR" != "$POSTGRES_DEFAULT_DIR" ]]; then
+	if [ "$(ls -A "$POSTGRES_DEFAULT_DIR")" ]; then
+		mv "$POSTGRES_DEFAULT_DIR" "$POSTGRES_DEFAULT_DIR".old
+	else
+		rm -rf "$POSTGRES_DEFAULT_DIR"
+	fi
+	ln -sf "$POSTGRES_DIR" "$POSTGRES_DEFAULT_DIR"
+	chown -h "$POSTGRES_USER":"$POSTGRES_USER" "$POSTGRES_DEFAULT_DIR"
+fi
+sudo -u "$POSTGRES_USER" initdb --pgdata "$POSTGRES_DEFAULT_DIR"/data
 systemctl enable --now postgresql
 
 # Setup User Accounts
 useradd -r koji
 
 # Setup PostgreSQL and populate schema
-sudo -u postgres createuser --no-superuser --no-createrole --no-createdb koji
-sudo -u postgres createdb -O koji koji
+sudo -u "$POSTGRES_USER" createuser --no-superuser --no-createrole --no-createdb koji
+sudo -u "$POSTGRES_USER" createdb -O koji koji
 sudo -u koji psql koji koji < /usr/share/doc/koji*/docs/schema.sql
 
 # Authorize Koji-web and Koji-hub resources
-# TODO: Add authentication with SSL certificates
-cat > /var/lib/pgsql/data/pg_hba.conf <<- EOF
-#TYPE   DATABASE    USER    CIDR-ADDRESS      METHOD
-host    koji        all    127.0.0.1/32       trust
-host    koji        all    ::1/128            trust
-local   koji        all                       trust
+cat > "$POSTGRES_DEFAULT_DIR"/data/pg_hba.conf <<- EOF
+#TYPE    DATABASE    USER    CIDR-ADDRESS    METHOD
+host     koji        all     127.0.0.1/32    trust
+host     koji        all     ::1/128         trust
+local    koji        all                     trust
 EOF
+systemctl reload postgresql
 
 # Bootstrapping the initial koji admin user into the PostgreSQL database
 # SSL Certificate authentication
@@ -172,8 +173,29 @@ KojiDir = $KOJI_DIR
 DNUsernameComponent = CN
 ProxyDNs = C=$COUNTRY_CODE,ST=$STATE,L=$LOCATION,O=$ORGANIZATION,OU=kojiweb,CN=$KOJI_MASTER_FQDN
 LoginCreatesUser = On
-KojiWebURL = https://$KOJI_MASTER_FQDN/koji
+KojiWebURL = $KOJI_URL/koji
 DisableNotifications = True
+EOF
+
+mkdir -p /etc/httpd/conf.d
+cat > /etc/httpd/conf.d/kojihub.conf <<- EOF
+Alias /kojihub /usr/share/koji-hub/kojixmlrpc.py
+<Directory "/usr/share/koji-hub">
+    Options ExecCGI
+    SetHandler wsgi-script
+    Require all granted
+</Directory>
+Alias /kojifiles "$KOJI_DIR"
+<Directory "$KOJI_DIR">
+    Options Indexes SymLinksIfOwnerMatch
+    AllowOverride None
+    Require all granted
+</Directory>
+<Location /kojihub/ssllogin>
+    SSLVerifyClient require
+    SSLVerifyDepth 10
+    SSLOptions +StdEnvVars
+</Location>
 EOF
 
 # Koji Web
@@ -181,8 +203,8 @@ mkdir -p /etc/kojiweb
 cat > /etc/kojiweb/web.conf <<- EOF
 [web]
 SiteName = koji
-KojiHubURL = https://$KOJI_MASTER_FQDN/kojihub
-KojiFilesURL = https://$KOJI_MASTER_FQDN/kojifiles
+KojiHubURL = $KOJI_URL/kojihub
+KojiFilesURL = $KOJI_URL/kojifiles
 WebCert = $KOJI_PKI_DIR/kojiweb.pem
 ClientCA = $KOJI_PKI_DIR/koji_ca_cert.crt
 KojiHubCA = $KOJI_PKI_DIR/koji_ca_cert.crt
@@ -192,44 +214,64 @@ LibPath = /usr/share/koji-web/lib
 LiteralFooter = True
 EOF
 
+mkdir -p /etc/httpd/conf.d
+cat > /etc/httpd/conf.d/kojiweb.conf <<- EOF
+Alias /koji "/usr/share/koji-web/scripts/wsgi_publisher.py"
+<Directory "/usr/share/koji-web/scripts">
+    Options ExecCGI
+    SetHandler wsgi-script
+    Require all granted
+</Directory>
+Alias /koji-static "/usr/share/koji-web/static"
+<Directory "/usr/share/koji-web/static">
+    Options None
+    AllowOverride None
+    Require all granted
+</Directory>
+EOF
+
 # Koji CLI
-cat > /etc/koji.conf <<- EOF
+cat > "$ADMIN_KOJI_DIR"/config <<- EOF
 [koji]
-server = https://$KOJI_MASTER_FQDN/kojihub
-weburl = https://$KOJI_MASTER_FQDN/koji
-topurl = https://$KOJI_MASTER_FQDN/kojifiles
+server = $KOJI_URL/kojihub
+weburl = $KOJI_URL/koji
+topurl = $KOJI_URL/kojifiles
 topdir = $KOJI_DIR
 cert = ~/.koji/client.crt
 ca = ~/.koji/clientca.crt
 serverca = ~/.koji/serverca.crt
 anon_retry = true
 EOF
-
+chown kojiadmin:kojiadmin "$ADMIN_KOJI_DIR"/config
 
 ## KOJI APPLICATION HOSTING
 # Koji Filesystem Skeleton
 mkdir -p "$KOJI_DIR"/{packages,repos,work,scratch,repos-dist}
-chown -R httpd:httpd "$KOJI_DIR"
+chown -R "$HTTPD_USER":"$HTTPD_USER" "$KOJI_DIR"
 
 ## Apache Configuration Files
 mkdir -p /etc/httpd/conf.d
-cat > /etc/httpd/conf.d/koji.conf <<- EOF
-LoadModule ssl_module lib/httpd/modules/mod_ssl.so
+cat > /etc/httpd/conf.d/ssl.conf <<- EOF
+ServerName $KOJI_MASTER_FQDN
 
-<VirtualHost _default_:80>
-    AllowEncodedSlashes NoDecode
-    RedirectMatch permanent /(.*) https://$KOJI_MASTER_FQDN/$1
-</VirtualHost>
+Listen 443 https
 
-Listen 443
+#SSLPassPhraseDialog exec:/usr/libexec/httpd-ssl-pass-dialog
+
+#SSLSessionCache         shmcb:/run/httpd/sslcache(512000)
+
+SSLRandomSeed startup file:/dev/urandom  256
+SSLRandomSeed connect builtin
+
 <VirtualHost _default_:443>
-    ServerName $KOJI_MASTER_FQDN
+    ErrorLog /var/log/httpd/ssl_error_log
+    TransferLog /var/log/httpd/ssl_access_log
+    LogLevel warn
 
     SSLEngine on
     SSLProtocol -all +TLSv1.2
     SSLCipherSuite EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:EECDH+ECDSA+SHA384:EECDH+ECDSA+SHA256:EECDH+aRSA+SHA384:EECDH+aRSA+SHA256:EECDH:EDH+aRSA:HIGH:!aNULL:!eNULL:!LOW:!3DES:!MD5:!EXP:!PSK:!SRP:!DSS:!RC4:!DH:!SHA1
     SSLHonorCipherOrder on
-    SSLOptions +StrictRequire +StdEnvVars
 
     SSLCertificateFile $KOJI_PKI_DIR/kojihub.pem
     SSLCertificateKeyFile $KOJI_PKI_DIR/private/kojihub.key
@@ -238,44 +280,24 @@ Listen 443
     SSLVerifyClient optional
     SSLVerifyDepth 10
 
-    # Koji Hub
-    Alias /kojihub /usr/share/koji-hub/kojixmlrpc.py
-    <Directory "/usr/share/koji-hub">
-        Options ExecCGI
-        SetHandler wsgi-script
-        Require all granted
+    <Files ~ "\.(cgi|shtml|phtml|php3?)$">
+        SSLOptions +StdEnvVars
+    </Files>
+    <Directory "/var/www/cgi-bin">
+        SSLOptions +StdEnvVars
     </Directory>
-    Alias /kojifiles "/srv/koji/"
-    <Directory "/srv/koji">
-        Options Indexes SymLinksIfOwnerMatch
-        AllowOverride None
-        Require all granted
-    </Directory>
-    <Location /kojihub/ssllogin>
-        SSLVerifyClient require
-    </Location>
 
-    # Koji Web
-    Alias /koji "/usr/share/koji-web/scripts/wsgi_publisher.py"
-    <Directory "/usr/share/koji-web/scripts/">
-        Options ExecCGI
-        SetHandler wsgi-script
-        Require all granted
-    </Directory>
-    Alias /koji-static/ "/usr/share/koji-web/static/"
-    <Directory "/usr/share/koji-web/static/">
-        Options None
-        AllowOverride None
-        Require all granted
-    </Directory>
+    CustomLog /var/log/httpd/ssl_request_log "%t %h %{SSL_PROTOCOL}x %{SSL_CIPHER}x \"%r\" %b"
 </VirtualHost>
 EOF
 
-## Apache Configuration Files
 mkdir -p /etc/httpd/conf.modules.d
 cat > /etc/httpd/conf.modules.d/wsgi.conf <<- EOF
 LoadModule wsgi_module lib/python2.7/site-packages/mod_wsgi/server/mod_wsgi-py27.so
 WSGISocketPrefix /run/httpd/wsgi
+EOF
+cat > /etc/httpd/conf.modules.d/ssl.conf <<- EOF
+LoadModule ssl_module lib/httpd/modules/mod_ssl.so
 EOF
 
 systemctl enable --now httpd
@@ -287,7 +309,7 @@ sudo -u kojiadmin koji moshimoshi
 
 ## KOJI DAEMON - BUILDER
 # Add the host entry for the koji builder to the database
-sudo -u kojiadmin koji add-host "$KOJI_SLAVE_FQDN" i386 x86_64
+sudo -u kojiadmin koji add-host "$KOJI_SLAVE_FQDN" "$RPM_ARCH"
 
 # Add the host to the createrepo channel
 sudo -u kojiadmin koji add-host-to-channel "$KOJI_SLAVE_FQDN" createrepo
@@ -300,49 +322,9 @@ pushd "$KOJI_PKI_DIR"
 ./gencert.sh "$KOJI_SLAVE_FQDN" "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/CN=$KOJI_SLAVE_FQDN"
 popd
 
-# Create mock folders and permissions
-mkdir -p /etc/mock/koji
-mkdir -p /var/lib/mock
-chown -R root:mock /var/lib/mock
-
-# Setup User Accounts
-useradd -r kojibuilder
-usermod -G mock kojibuilder
-
-# Kojid Configuration Files
-mkdir -p /etc/kojid
-cat > /etc/kojid/kojid.conf <<- EOF
-[kojid]
-sleeptime=5
-maxjobs=16
-topdir=$KOJI_DIR
-workdir=/tmp/koji
-mockdir=/var/lib/mock
-mockuser=kojibuilder
-mockhost=generic-linux-gnu
-user=$KOJI_SLAVE_FQDN
-server=https://$KOJI_MASTER_FQDN/kojihub
-topurl=https://$KOJI_MASTER_FQDN/kojifiles
-use_createrepo_c=True
-allowed_scms=$CGIT_FQDN:/packages/*
-cert = $KOJI_PKI_DIR/$KOJI_SLAVE_FQDN.pem
-ca = $KOJI_PKI_DIR/koji_ca_cert.crt
-serverca = $KOJI_PKI_DIR/koji_ca_cert.crt
-EOF
-
-if env | grep -q proxy; then
-	echo "yum_proxy = $https_proxy" >> /etc/kojid/kojid.conf
-	mkdir -p /etc/systemd/system/kojid.service.d
-	cat > /etc/systemd/system/kojid.service.d/00-proxy.conf <<- EOF
-	[Service]
-	Environment=http_proxy=$http_proxy
-	Environment=https_proxy=$https_proxy
-	Environment=no_proxy=$no_proxy
-	EOF
-	systemctl daemon-reload
+if [[ "$KOJI_SLAVE_FQDN" = "$KOJI_MASTER_FQDN" ]]; then
+	"$SCRIPT_DIR"/deploy-koji-builder.sh
 fi
-
-systemctl enable --now kojid
 
 
 ## KOJIRA - DNF|YUM REPOSITORY CREATION AND MAINTENANCE
@@ -354,7 +336,7 @@ sudo -u kojiadmin koji grant-permission repo kojira
 mkdir -p /etc/kojira
 cat > /etc/kojira/kojira.conf <<- EOF
 [kojira]
-server=https://$KOJI_MASTER_FQDN/kojihub
+server=$KOJI_URL/kojihub
 topdir=$KOJI_DIR
 logfile=/var/log/kojira.log
 with_src=no
