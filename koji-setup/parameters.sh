@@ -7,5 +7,5 @@ export KOJI_MASTER_FQDN=$(hostname -f)
 export KOJI_SLAVE_FQDN="$KOJI_MASTER_FQDN"
 export KOJI_DIR=/srv/koji
 export CGIT_FQDN="$KOJI_MASTER_FQDN"
-export EXTERNAL_REPO=https://cdn.download.clearlinux.org/current/\$arch/os/
+#export EXTERNAL_REPO=https://cdn.download.clearlinux.org/releases/"$(curl https://download.clearlinux.org/latest)"/clear/\$arch/os/
 export TAG_NAME=clear
