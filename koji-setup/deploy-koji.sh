@@ -289,7 +289,8 @@ sudo -u kojiadmin koji add-host "$KOJI_SLAVE_FQDN" i386 x86_64
 sudo -u kojiadmin koji add-host-to-channel "$KOJI_SLAVE_FQDN" createrepo
 
 # A note on capacity
-sudo -u kojiadmin koji edit-host --capacity=16 "$KOJI_SLAVE_FQDN"
+KOJID_CAPACITY=$(( $(grep -c ^processor /proc/cpuinfo) / 3 ))
+sudo -u kojiadmin koji edit-host --capacity="$KOJID_CAPACITY" "$KOJI_SLAVE_FQDN"
 
 # Generate certificates
 pushd "$KOJI_PKI_DIR"
