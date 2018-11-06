@@ -17,6 +17,8 @@ set -xe
 SCRIPT_DIR=$(dirname $(realpath "$0"))
 source "$SCRIPT_DIR"/parameters.sh
 
+## INSTALL KOJI
+swupd bundle-add koji || true
 
 ## SETTING UP SSL CERTIFICATES FOR AUTHENTICATION
 KOJI_PKI_DIR=/etc/pki/koji
