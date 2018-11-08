@@ -1,6 +1,6 @@
 all:
   hosts:
     koji-all-in-one:
-      ansible_port: 2222
+      ansible_port: 22
       ansible_host: localhost
       ansible_user: test
