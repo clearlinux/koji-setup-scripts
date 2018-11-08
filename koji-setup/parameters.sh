@@ -9,3 +9,4 @@ export KOJI_DIR=/srv/koji
 export CGIT_FQDN="$KOJI_MASTER_FQDN"
 #export EXTERNAL_REPO=https://cdn.download.clearlinux.org/releases/"$(curl https://download.clearlinux.org/latest)"/clear/\$arch/os/
 export TAG_NAME=clear
+export KOJID_CAPACITY=16
