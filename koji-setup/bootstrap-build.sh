@@ -5,6 +5,7 @@ source "$SCRIPT_DIR"/parameters.sh
 
 sudo -u kojiadmin koji add-tag dist-"$TAG_NAME"
 sudo -u kojiadmin koji add-tag --parent dist-"$TAG_NAME" --arches "x86_64" dist-"$TAG_NAME"-build
+sudo -u kojiadmin koji edit-tag dist-"$TAG_NAME" -x mock.package_manager=dnf
 sudo -u kojiadmin koji add-group dist-"$TAG_NAME"-build build
 sudo -u kojiadmin koji add-group dist-"$TAG_NAME"-build srpm-build
 sudo -u kojiadmin koji add-target dist-"$TAG_NAME" dist-"$TAG_NAME"-build
