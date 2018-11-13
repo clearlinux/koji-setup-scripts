@@ -328,6 +328,18 @@ ca = $KOJI_PKI_DIR/koji_ca_cert.crt
 serverca = $KOJI_PKI_DIR/koji_ca_cert.crt
 EOF
 
+if env | grep -q proxy; then
+	echo "yum_proxy = $https_proxy" >> /etc/kojid/kojid.conf
+	mkdir -p /etc/systemd/system/kojid.service.d
+	cat > /etc/systemd/system/kojid.service.d/00-proxy.conf <<- EOF
+	[Service]
+	Environment=http_proxy=$http_proxy
+	Environment=https_proxy=$https_proxy
+	Environment=no_proxy=$no_proxy
+	EOF
+	systemctl daemon-reload
+fi
+
 systemctl enable --now kojid
 
 
