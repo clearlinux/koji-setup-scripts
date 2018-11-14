@@ -23,11 +23,13 @@ swupd bundle-add koji || true
 ## SETTING UP SSL CERTIFICATES FOR AUTHENTICATION
 KOJI_PKI_DIR=/etc/pki/koji
 mkdir -p "$KOJI_PKI_DIR"/{certs,private}
+RANDFILE=$KOJI_PKI_DIR/.rand
+dd if=/dev/urandom of="$RANDFILE" bs=256 count=1
 
 # Certificate generation
 cat > "$KOJI_PKI_DIR"/ssl.cnf <<- EOF
 HOME                    = $KOJI_PKI_DIR
-RANDFILE                = $KOJI_PKI_DIR/.rand
+RANDFILE                = $RANDFILE
 
 [ca]
 default_ca              = ca_default
