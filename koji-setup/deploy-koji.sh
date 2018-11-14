@@ -14,7 +14,7 @@
 # limitations under the License.
 
 set -xe
-SCRIPT_DIR=$(dirname $(realpath "$0"))
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 source "$SCRIPT_DIR"/parameters.sh
 
 ## INSTALL KOJI
