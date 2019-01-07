@@ -4,6 +4,7 @@
 
 set -xe
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+source "$SCRIPT_DIR"/globals.sh
 source "$SCRIPT_DIR"/parameters.sh
 
 swupd bundle-add scm-server httpd
