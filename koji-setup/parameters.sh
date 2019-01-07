@@ -11,12 +11,11 @@ export KOJI_SLAVE_FQDN="$KOJI_MASTER_FQDN"
 export KOJID_CAPACITY=16
 export TAG_NAME=clear
 # Use for koji SSL certificates
-export KOJI_PKI_DIR=/etc/pki/koji
-export COUNTRY_CODE=US
-export STATE=Oregon
-export LOCATION=Hillsboro
+export COUNTRY_CODE='Example Country Code'
+export STATE='Example State'
+export LOCATION='Example Location'
 export ORGANIZATION='Example Organization'
-export ORG_UNIT='Example Unit'
+export ORG_UNIT='Example Org Unit'
 # Use for importing existing RPMs
 export RPM_ARCH='x86_64'
 export SRC_RPM_DIR=
@@ -27,21 +26,12 @@ export EXTERNAL_REPO=https://cdn.download.clearlinux.org/releases/"$(curl https:
 
 ## POSTGRESQL DATABASE
 export POSTGRES_DIR=/srv/pgsql
-export POSTGRES_DEFAULT_DIR=/var/lib/pgsql
-export POSTGRES_USER=postgres
 
 ## GIT REPOSITORIES
 export GIT_DIR=/srv/gitolite
-export GIT_DEFAULT_DIR=/var/lib/gitolite
-export GIT_USER=gitolite
 export GIT_FQDN="$KOJI_MASTER_FQDN"
 export IS_ANONYMOUS_GIT_NEEDED=false
 export GITOLITE_PUB_KEY=''
-
-## APACHE WEB SERVER
-export HTTPD_USER=httpd
-# Autoindexing should occur in this directory by default
-export HTTPD_DOCUMENT_ROOT=/var/www/html
 
 ## UPSTREAMS CACHE
 export UPSTREAMS_DIR=/srv/upstreams

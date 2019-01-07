@@ -4,6 +4,7 @@
 
 set -xe
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+source "$SCRIPT_DIR"/globals.sh
 source "$SCRIPT_DIR"/parameters.sh
 
 if [[ -n "$SRC_RPM_DIR" && -n "$BIN_RPM_DIR" ]]; then
