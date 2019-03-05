@@ -4,6 +4,7 @@
 
 ## KOJI RPM BUILD AND TRACKER
 export KOJI_DIR=/srv/koji
+export KOJI_MOUNT_DIR=/mnt/koji
 export KOJI_MASTER_FQDN="$(hostname -f)"
 export KOJI_URL=https://"$KOJI_MASTER_FQDN"
 export KOJI_MOUNT_DIR=/mnt/koji

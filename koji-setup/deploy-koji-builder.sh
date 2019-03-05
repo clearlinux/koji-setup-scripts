@@ -20,12 +20,17 @@ useradd -r kojibuilder
 usermod -G mock kojibuilder
 
 # Kojid Configuration Files
+if [[ "$KOJI_SLAVE_FQDN" = "$KOJI_MASTER_FQDN" ]]; then
+	KOJI_TOP_DIR="$KOJI_DIR"
+else
+	KOJI_TOP_DIR="$KOJI_MOUNT_DIR"
+fi
 mkdir -p /etc/kojid
 cat > /etc/kojid/kojid.conf <<- EOF
 [kojid]
 sleeptime=5
 maxjobs=16
-topdir=$KOJI_DIR
+topdir=$KOJI_TOP_DIR
 workdir=/tmp/koji
 mockdir=/var/lib/mock
 mockuser=kojibuilder
