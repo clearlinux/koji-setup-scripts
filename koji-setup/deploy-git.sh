@@ -36,7 +36,7 @@ if $IS_ANONYMOUS_GIT_NEEDED; then
 	Description=Git Daemon
 
 	[Service]
-	ExecStart=/usr/bin/git daemon --reuseaddr --base-path=$GIT_DEFAULT_DIR $GIT_DEFAULT_DIR
+	ExecStart=/usr/bin/git daemon --export-all --reuseaddr --base-path=$GIT_DEFAULT_DIR/repositories $GIT_DEFAULT_DIR/repositories
 
 	Restart=always
 	RestartSec=500ms
