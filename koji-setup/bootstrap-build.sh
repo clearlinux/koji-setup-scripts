@@ -8,10 +8,10 @@ source "$SCRIPT_DIR"/globals.sh
 source "$SCRIPT_DIR"/parameters.sh
 
 if [[ -n "$SRC_RPM_DIR" && -n "$BIN_RPM_DIR" ]]; then
-	sudo -u kojiadmin koji import "$SRC_RPM_DIR"/*.src.rpm
-	sudo -u kojiadmin koji import "$BIN_RPM_DIR"/*."$RPM_ARCH".rpm
+	find "$SRC_RPM_DIR" -name '*.src.rpm' | xargs -n 1 -I {} sudo -u kojiadmin koji import {}
+	find "$BIN_RPM_DIR" -name "*.$RPM_ARCH.rpm" | xargs -n 1 -I {} sudo -u kojiadmin koji import {}
 	if [[ -n "$DEBUG_RPM_DIR" ]]; then
-		sudo -u kojiadmin koji import "$DEBUG_RPM_DIR"/*."$RPM_ARCH".rpm
+		find "$DEBUG_RPM_DIR" -name "*.$RPM_ARCH.rpm" | xargs -n 1 -I {} sudo -u kojiadmin koji import {}
 	fi
 fi
 sudo -u kojiadmin koji add-tag dist-"$TAG_NAME"
