@@ -26,7 +26,7 @@ GITOLITE_PUB_KEY_FILE="$GIT_DEFAULT_DIR/gitolite.pub"
 echo "$GITOLITE_PUB_KEY" > "$GITOLITE_PUB_KEY_FILE"
 chown "$GIT_USER":"$GIT_USER" "$GITOLITE_PUB_KEY_FILE"
 sudo -u "$GIT_USER" gitolite setup -pk "$GITOLITE_PUB_KEY_FILE"
-
+usermod -s /bin/bash gitolite
 
 if $IS_ANONYMOUS_GIT_NEEDED; then
 	## GIT PROTOCOL CLONING
