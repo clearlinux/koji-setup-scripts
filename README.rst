@@ -1,6 +1,7 @@
 Assumes:
 
 * All scripts are run as the root user
+* Basic configurations (e.g. network, time, etc.) have been applied to the host to allow applications to run well
 
 How these scripts work:
 
