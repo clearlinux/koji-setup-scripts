@@ -50,9 +50,9 @@ if env | grep -q proxy; then
 	mkdir -p /etc/systemd/system/kojid.service.d
 	cat > /etc/systemd/system/kojid.service.d/00-proxy.conf <<- EOF
 	[Service]
-	Environment=http_proxy=$http_proxy
-	Environment=https_proxy=$https_proxy
-	Environment=no_proxy=$no_proxy
+	Environment="http_proxy=$http_proxy"
+	Environment="https_proxy=$https_proxy"
+	Environment="no_proxy=$no_proxy"
 	EOF
 	systemctl daemon-reload
 fi
