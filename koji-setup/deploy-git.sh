@@ -77,8 +77,8 @@ if $IS_ANONYMOUS_GIT_NEEDED; then
 	# Enable statistics per week, month and quarter
 	max-stats=quarter
 
-	# Allow download of tar.gz, tar.bz2 and zip-files
-	snapshots=tar.gz tar.bz2
+	# Allow download of tar.gz, tar.bz2, and tar.xz formats
+	snapshots=tar.gz tar.bz2 tar.xz
 
 	##
 	## List of common mimetypes
