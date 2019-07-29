@@ -51,9 +51,9 @@ commonName              = supplied
 emailAddress            = optional
 
 [req]
-default_bits            = 2048
+default_bits            = 4096
 default_keyfile         = privkey.pem
-default_md              = sha256
+default_md              = sha512
 distinguished_name      = req_distinguished_name
 attributes              = req_attributes
 x509_extensions         = v3_ca # The extensions to add to the self signed cert
