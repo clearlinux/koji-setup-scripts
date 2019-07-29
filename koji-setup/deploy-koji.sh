@@ -38,7 +38,7 @@ name_opt                = ca_default
 cert_opt                = ca_default
 default_days            = 3650
 default_crl_days        = 30
-default_md              = sha256
+default_md              = sha512
 preserve                = no
 policy                  = policy_match
 
