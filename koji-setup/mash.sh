@@ -2,7 +2,7 @@
 # Copyright (C) 2019 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
 
-set -xe
+set -e
 if [[ -e /etc/profile.d/proxy.sh ]]; then
 	source /etc/profile.d/proxy.sh
 fi
