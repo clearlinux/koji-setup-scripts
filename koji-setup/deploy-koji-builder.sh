@@ -7,8 +7,8 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 source "$SCRIPT_DIR"/globals.sh
 source "$SCRIPT_DIR"/parameters.sh
 
-# Install kojid
-swupd bundle-add koji
+swupd bundle-add koji || :
+check_dependency kojid
 
 # Create mock folders and permissions
 mkdir -p /etc/mock/koji

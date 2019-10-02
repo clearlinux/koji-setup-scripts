@@ -7,7 +7,9 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 source "$SCRIPT_DIR"/globals.sh
 source "$SCRIPT_DIR"/parameters.sh
 
-swupd bundle-add nfs-utils
+swupd bundle-add nfs-utils || :
+check_dependency rpcbind
+check_dependency rpc.nfsd
 
 # Export server directory to be mounted by clients
 echo "$KOJI_DIR $KOJI_SLAVE_FQDN(ro,no_root_squash)" >> /etc/exports

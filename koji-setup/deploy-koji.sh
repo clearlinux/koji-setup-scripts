@@ -7,8 +7,11 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 source "$SCRIPT_DIR"/globals.sh
 source "$SCRIPT_DIR"/parameters.sh
 
-# INSTALL KOJI
-swupd bundle-add koji
+swupd bundle-add koji || :
+check_dependency koji
+check_dependency httpd
+check_dependency kojira
+check_dependency postgres
 
 ## SETTING UP SSL CERTIFICATES FOR AUTHENTICATION
 mkdir -p "$KOJI_PKI_DIR"/{certs,private}
