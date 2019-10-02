@@ -7,7 +7,9 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 source "$SCRIPT_DIR"/globals.sh
 source "$SCRIPT_DIR"/parameters.sh
 
-swupd bundle-add scm-server httpd
+swupd bundle-add scm-server || :
+check_dependency gitolite
+check_dependency git
 
 ## GITOLITE SETUP
 mkdir -p "$GIT_DIR"
@@ -29,6 +31,9 @@ sudo -u "$GIT_USER" gitolite setup -pk "$GITOLITE_PUB_KEY_FILE"
 usermod -s /bin/bash gitolite
 
 if $IS_ANONYMOUS_GIT_NEEDED; then
+	swupd bundle-add httpd || :
+	check_dependency httpd
+
 	## GIT PROTOCOL CLONING
 	mkdir -p /etc/systemd/system
 	cat > /etc/systemd/system/git-daemon.service <<- EOF
