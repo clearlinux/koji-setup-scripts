@@ -294,7 +294,6 @@ EOF
 
 mkdir -p /etc/httpd/conf.modules.d
 cat > /etc/httpd/conf.modules.d/wsgi.conf <<- EOF
-LoadModule wsgi_module lib/python2.7/site-packages/mod_wsgi/server/mod_wsgi-py27.so
 WSGISocketPrefix /run/httpd/wsgi
 EOF
 cat > /etc/httpd/conf.modules.d/ssl.conf <<- EOF
