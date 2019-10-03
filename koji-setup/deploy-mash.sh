@@ -18,8 +18,6 @@ MASH_LINK="$HTTPD_DOCUMENT_ROOT"/"$(basename "$MASH_DIR")"
 ln -sf "$MASH_DIR"/latest "$MASH_LINK"
 chown -h kojiadmin:kojiadmin "$MASH_LINK"
 usermod -a -G kojiadmin "$HTTPD_USER"
-# Required because Clear is stateless, and mash is run as a non-elevated user
-mkdir -p /var/cache/mash
 rpm --initdb
 
 mkdir -p /etc/mash
