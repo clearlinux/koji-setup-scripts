@@ -5,10 +5,11 @@
 set -e
 . /etc/profile.d/proxy.sh || :
 
+KOJI_TAG="${KOJI_TAG:-"$1"}"
 BUILD_ARCH="${BUILD_ARCH:-x86_64}"
 KOJI_DIR="${KOJI_DIR:-/srv/koji}"
 MASH_DIR="${MASH_DIR:-/srv/mash}"
-MASH_TRACKER_FILE="$MASH_DIR"/latest-mash-build
+MASH_TRACKER_FILE="$MASH_DIR"/latest-${KOJI_TAG}-build
 MASH_TRACKER_DIR="$MASH_DIR"/latest
 MASH_DIR_OLD="$MASH_TRACKER_DIR".old
 MASH_DIR_NEW="$MASH_TRACKER_DIR".new
@@ -37,18 +38,18 @@ create_dist_repos() {
 
 	cp -f "${KOJI_REPO_PATH}/groups/comps.xml" "${comps_file}"
 
-	make_repo "${source_dir}" "${output_dir}" "clear/${BUILD_ARCH}/os" "Packages" "${bin_rpm_paths}" "${comps_file}" &
-	make_repo "${source_dir}" "${output_dir}" "clear/${BUILD_ARCH}/debug" "." "${debuginfo_rpm_paths}" &
-	make_repo "${source_dir}" "${output_dir}" "clear/source/SRPMS" "." "${src_rpm_paths}" &
+	make_repo "${source_dir}" "${output_dir}" "${KOJI_TAG}/${BUILD_ARCH}/os" "Packages" "${bin_rpm_paths}" "${comps_file}" &
+	make_repo "${source_dir}" "${output_dir}" "${KOJI_TAG}/${BUILD_ARCH}/debug" "." "${debuginfo_rpm_paths}" &
+	make_repo "${source_dir}" "${output_dir}" "${KOJI_TAG}/source/SRPMS" "." "${src_rpm_paths}" &
 	wait
 
-	create_dnf_conf "${work_dir}/dnf-os.conf" "${output_dir}/clear/${BUILD_ARCH}/os" clear-os
-	create_dnf_conf "${work_dir}/dnf-debug.conf" "${output_dir}/clear/${BUILD_ARCH}/debug" clear-debug
-	create_dnf_conf "${work_dir}/dnf-SRPMS.conf" "${output_dir}/clear/source/SRPMS" clear-SRPMS
+	create_dnf_conf "${work_dir}/dnf-os.conf" "${output_dir}/${KOJI_TAG}/${BUILD_ARCH}/os" clear-os
+	create_dnf_conf "${work_dir}/dnf-debug.conf" "${output_dir}/${KOJI_TAG}/${BUILD_ARCH}/debug" clear-debug
+	create_dnf_conf "${work_dir}/dnf-SRPMS.conf" "${output_dir}/${KOJI_TAG}/source/SRPMS" clear-SRPMS
 
-	write_packages_file "${work_dir}/dnf-os.conf" "$output_dir/clear/$BUILD_ARCH/packages-os"
-	write_packages_file "${work_dir}/dnf-debug.conf" "$output_dir/clear/$BUILD_ARCH/packages-debug"
-	write_packages_file "${work_dir}/dnf-SRPMS.conf" "$output_dir/clear/source/packages-SRPMS"
+	write_packages_file "${work_dir}/dnf-os.conf" "$output_dir/${KOJI_TAG}/$BUILD_ARCH/packages-os"
+	write_packages_file "${work_dir}/dnf-debug.conf" "$output_dir/${KOJI_TAG}/$BUILD_ARCH/packages-debug"
+	write_packages_file "${work_dir}/dnf-SRPMS.conf" "$output_dir/${KOJI_TAG}/source/packages-SRPMS"
 
 	rm -rf "${work_dir}"
 }
@@ -99,18 +100,18 @@ if [[ -e "$MASH_TRACKER_FILE" ]]; then
 else
 	MASH_BUILD_NUM=0
 fi
-KOJI_TAG="${KOJI_TAG:-"dist-clear"}"
 KOJI_REPO_PATH="$(realpath "$KOJI_DIR/repos/$KOJI_TAG-build/latest")"
 KOJI_BUILD_NUM="$(basename "$KOJI_REPO_PATH")"
 if [[ "$MASH_BUILD_NUM" -ne "$KOJI_BUILD_NUM" ]]; then
 	rm -rf "$MASH_DIR_NEW"
 	mkdir -p "$MASH_DIR_NEW"
 	create_dist_repos "$MASH_TRACKER_DIR" "$MASH_DIR_NEW"
-	if [[ -e "$MASH_TRACKER_DIR" ]]; then
-		mv "$MASH_TRACKER_DIR" "$MASH_DIR_OLD"
+	if [[ -e "$MASH_TRACKER_DIR/$KOJI_TAG" ]]; then
+		mv "$MASH_TRACKER_DIR/$KOJI_TAG" "$MASH_DIR_OLD/$KOJI_TAG"
 	fi
-	mv "$MASH_DIR_NEW" "$MASH_TRACKER_DIR"
+	mv "$MASH_DIR_NEW/$KOJI_TAG" "$MASH_TRACKER_DIR"
 	rm -rf "$MASH_DIR_OLD"
+    rm -rf "$MASH_DIR_NEW"
 
 	echo "$KOJI_BUILD_NUM" > "$MASH_TRACKER_FILE"
 fi
