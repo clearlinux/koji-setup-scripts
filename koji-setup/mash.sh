@@ -107,8 +107,10 @@ if [[ "$MASH_BUILD_NUM" -ne "$KOJI_BUILD_NUM" ]]; then
 	mkdir -p "$MASH_DIR_NEW"
 	create_dist_repos "$MASH_TRACKER_DIR" "$MASH_DIR_NEW"
 	if [[ -e "$MASH_TRACKER_DIR/$KOJI_TAG" ]]; then
+		mkdir -p "$MASH_DIR_OLD"
 		mv "$MASH_TRACKER_DIR/$KOJI_TAG" "$MASH_DIR_OLD/$KOJI_TAG"
 	fi
+    mkdir -p "$MASH_TRACKER_DIR"
 	mv "$MASH_DIR_NEW/$KOJI_TAG" "$MASH_TRACKER_DIR"
 	rm -rf "$MASH_DIR_OLD"
     rm -rf "$MASH_DIR_NEW"
