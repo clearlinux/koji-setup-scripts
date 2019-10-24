@@ -14,7 +14,8 @@ MASH_DIR_OLD="$MASH_TRACKER_DIR".old
 MASH_DIR_NEW="$MASH_TRACKER_DIR".new
 
 create_dist_repos() {
-	local output_dir="${1}"
+	local source_dir="${1}"
+	local output_dir="${2}"
 
 	local work_dir="$(mktemp -d)"
 
@@ -36,9 +37,9 @@ create_dist_repos() {
 
 	cp -f "${KOJI_REPO_PATH}/groups/comps.xml" "${comps_file}"
 
-	make_repo "${output_dir}/clear/${BUILD_ARCH}/os" "Packages" "${bin_rpm_paths}" "${comps_file}" &
-	make_repo "${output_dir}/clear/${BUILD_ARCH}/debug" "." "${debuginfo_rpm_paths}" &
-	make_repo "${output_dir}/clear/source/SRPMS" "." "${src_rpm_paths}" &
+	make_repo "${source_dir}" "${output_dir}" "clear/${BUILD_ARCH}/os" "Packages" "${bin_rpm_paths}" "${comps_file}" &
+	make_repo "${source_dir}" "${output_dir}" "clear/${BUILD_ARCH}/debug" "." "${debuginfo_rpm_paths}" &
+	make_repo "${source_dir}" "${output_dir}" "clear/source/SRPMS" "." "${src_rpm_paths}" &
 	wait
 
 	create_dnf_conf "${work_dir}/dnf-os.conf" "${output_dir}/clear/${BUILD_ARCH}/os" clear-os
@@ -53,15 +54,19 @@ create_dist_repos() {
 }
 
 make_repo() {
-	local repo_dir="${1}"
-	local rpm_dir="${1}/${2}"
-	local file_list="${3}"
-	local comps_file="${4}"
+	local previous_repo_dir="${1}/${3}"
+	local repo_dir="${2}/${3}"
+	local rpm_dir="${repo_dir}/${4}"
+	local file_list="${5}"
+	local comps_file="${6}"
 
 	local create_repo_cmd="createrepo_c --quiet --database --compress-type xz --workers $(nproc --all)"
+	if [[ -e "${previous_repo_dir}" ]]; then
+		create_repo_cmd="${create_repo_cmd} --update --update-md-path ${previous_repo_dir}"
+	fi
 
 	mkdir -p "${rpm_dir}"
-	xargs -a "${file_list}" -I {} cp -f {} "${rpm_dir}"
+	xargs -a "${file_list}" -I {} ln -sf {} "${rpm_dir}"
 	if [[ -z "${comps_file}" ]]; then
 		${create_repo_cmd} "${repo_dir}"
 	else
@@ -100,7 +105,7 @@ KOJI_BUILD_NUM="$(basename "$KOJI_REPO_PATH")"
 if [[ "$MASH_BUILD_NUM" -ne "$KOJI_BUILD_NUM" ]]; then
 	rm -rf "$MASH_DIR_NEW"
 	mkdir -p "$MASH_DIR_NEW"
-	create_dist_repos "$MASH_DIR_NEW"
+	create_dist_repos "$MASH_TRACKER_DIR" "$MASH_DIR_NEW"
 	if [[ -e "$MASH_TRACKER_DIR" ]]; then
 		mv "$MASH_TRACKER_DIR" "$MASH_DIR_OLD"
 	fi
