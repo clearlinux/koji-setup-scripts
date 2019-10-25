@@ -29,7 +29,7 @@ repodir = file://$KOJI_DIR
 use_sqlite = True
 use_repoview = False
 EOF
-cat > /etc/mash/clear.mash <<- EOF
+cat > /etc/mash/$TAG_NAME.mash <<- EOF
 [clear]
 rpm_path = %(arch)s/os/Packages
 repodata_path = %(arch)s/os/
@@ -37,7 +37,7 @@ source_path = source/SRPMS
 debuginfo = True
 multilib = False
 multilib_method = devel
-tag = dist-$TAG_NAME
+tag = $TAG_NAME
 inherit = True
 strict_keys = False
 arches = $RPM_ARCH
@@ -46,14 +46,14 @@ EOF
 mkdir -p "$MASH_SCRIPT_DIR"
 cp -f "$SCRIPT_DIR"/mash.sh "$MASH_SCRIPT_DIR"
 mkdir -p /etc/systemd/system
-cat > /etc/systemd/system/mash.service <<- EOF
+cat > /etc/systemd/system/mash@$TAG_NAME.service <<- EOF
 [Unit]
 Description=Mash script to loop local repository creation for local image builds
 
 [Service]
 User=kojiadmin
 Group=kojiadmin
-ExecStart=$MASH_SCRIPT_DIR/mash.sh
+ExecStart=${MASH_SCRIPT_DIR}/mash.sh %I
 Restart=always
 RestartSec=10s
 
@@ -61,4 +61,4 @@ RestartSec=10s
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable --now mash
+systemctl enable --now mash@$TAG_NAME
