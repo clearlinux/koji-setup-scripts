@@ -348,4 +348,11 @@ ca = $KOJI_PKI_DIR/koji_ca_cert.crt
 serverca = $KOJI_PKI_DIR/koji_ca_cert.crt
 EOF
 
+# Ensure postgresql is started prior to running kojira service
+mkdir -p /etc/systemd/system/kojira.service.d
+cat > /etc/systemd/system/kojira.service.d/after-postgresql.conf <<EOF
+[Unit]
+After=postgresql.service
+EOF
+
 systemctl enable --now kojira
