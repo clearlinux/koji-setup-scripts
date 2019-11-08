@@ -7,18 +7,39 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 source "$SCRIPT_DIR"/globals.sh
 source "$SCRIPT_DIR"/parameters.sh
 
+STAGING_RPM_DIR="$KOJI_DIR/work/imported-rpms"
+STAGING_RPM_SRC_DIR="$STAGING_RPM_DIR/src"
+STAGING_RPM_BIN_DIR="$STAGING_RPM_DIR/bin"
+STAGING_RPM_DEBUG_DIR="$STAGING_RPM_DIR/debug"
+
+import_koji_pkg() {
+	local src_dir="$1"
+	local dst_dir="$2"
+	local search_pattern="$3"
+	cp -r "$src_dir" "$dst_dir"
+	chown -R "$HTTPD_USER":"$HTTPD_USER" "$dst_dir"
+	find "$dst_dir" -name "$search_pattern" -exec koji import --link {} + > /dev/null
+}
+
 if [[ -n "$SRC_RPM_DIR" && -n "$BIN_RPM_DIR" ]]; then
-	find "$SRC_RPM_DIR" -name '*.src.rpm' | xargs -n 1 -I {} sudo -u kojiadmin koji import {}
-	find "$BIN_RPM_DIR" -name "*.$RPM_ARCH.rpm" | xargs -n 1 -I {} sudo -u kojiadmin koji import {}
+	ADMIN_KOJI_DIR="$(echo ~kojiadmin)/.koji"
+	cp -r "$ADMIN_KOJI_DIR" "$HOME/.koji"
+	mkdir -p "$STAGING_RPM_DIR"
+	chown -R "$HTTPD_USER":"$HTTPD_USER" "$STAGING_RPM_DIR"
+
+	import_koji_pkg "$SRC_RPM_DIR" "$STAGING_RPM_SRC_DIR" "*.src.rpm"
+	import_koji_pkg "$BIN_RPM_DIR" "$STAGING_RPM_BIN_DIR" "*.$RPM_ARCH.rpm"
 	if [[ -n "$DEBUG_RPM_DIR" ]]; then
-		find "$DEBUG_RPM_DIR" -name "*.$RPM_ARCH.rpm" | xargs -n 1 -I {} sudo -u kojiadmin koji import {}
+		import_koji_pkg "$DEBUG_RPM_DIR" "$STAGING_RPM_DEBUG_DIR" "*.$RPM_ARCH.rpm"
 	fi
+
+	rm -rf "$STAGING_RPM_DIR" "$HOME/.koji"
 fi
 sudo -u kojiadmin koji add-tag dist-"$TAG_NAME"
 sudo -u kojiadmin koji edit-tag dist-"$TAG_NAME" -x mock.package_manager=dnf
 if [[ -n "$SRC_RPM_DIR" && -n "$BIN_RPM_DIR" ]]; then
-	sudo -u kojiadmin koji list-pkgs --quiet | xargs -I {} sudo -u kojiadmin koji add-pkg --owner kojiadmin dist-"$TAG_NAME" {}
-	sudo -u kojiadmin koji list-untagged | xargs -n 1 -I {} sudo -u kojiadmin koji call tagBuildBypass dist-"$TAG_NAME" {}
+	sudo -u kojiadmin koji list-pkgs --quiet | xargs sudo -u kojiadmin koji add-pkg --owner kojiadmin dist-"$TAG_NAME"
+	sudo -u kojiadmin koji list-untagged | xargs -n 1 -P 100 sudo -u kojiadmin koji call tagBuildBypass dist-"$TAG_NAME" > /dev/null
 fi
 sudo -u kojiadmin koji add-tag --parent dist-"$TAG_NAME" --arches "$RPM_ARCH" dist-"$TAG_NAME"-build
 sudo -u kojiadmin koji add-target dist-"$TAG_NAME" dist-"$TAG_NAME"-build
