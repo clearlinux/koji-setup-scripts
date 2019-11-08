@@ -7,7 +7,6 @@ export KOJI_DIR=/srv/koji
 export KOJI_MOUNT_DIR=/mnt/koji
 export KOJI_MASTER_FQDN="$(hostname -f)"
 export KOJI_URL=https://"$KOJI_MASTER_FQDN"
-export KOJI_MOUNT_DIR=/mnt/koji
 export KOJI_SLAVE_FQDN="$KOJI_MASTER_FQDN"
 export KOJID_CAPACITY=16
 export TAG_NAME=clear
