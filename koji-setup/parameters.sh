@@ -11,11 +11,11 @@ export KOJI_URL=https://"$KOJI_MASTER_FQDN"
 export KOJID_CAPACITY=16
 export TAG_NAME=clear
 # Use for koji SSL certificates
-export COUNTRY_CODE='Example Country Code'
-export STATE='Example State'
-export LOCATION='Example Location'
-export ORGANIZATION='Example Organization'
-export ORG_UNIT='Example Org Unit'
+export COUNTRY_CODE='EX'
+export STATE='Example'
+export LOCATION='Example'
+export ORGANIZATION='Example'
+export ORG_UNIT='Example'
 # Use for importing existing RPMs
 export RPM_ARCH='x86_64'
 export SRC_RPM_DIR=

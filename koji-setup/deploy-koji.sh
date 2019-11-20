@@ -65,7 +65,7 @@ string_mask             = MASK:0x2002
 [req_distinguished_name]
 countryName                     = Country Name (2 letter code)
 countryName_min                 = 2
-countryName_max                 = 64
+countryName_max                 = 2
 stateOrProvinceName             = State or Province Name (full name)
 localityName                    = Locality Name (eg, city)
 0.organizationName              = Organization Name (eg, company)
@@ -77,8 +77,8 @@ emailAddress_max                = 64
 
 [req_attributes]
 challengePassword               = A challenge password
-challengePassword_min           = 4
-challengePassword_max           = 128
+challengePassword_min           = 8
+challengePassword_max           = 64
 unstructuredName                = An optional company name
 
 [usr_cert]
