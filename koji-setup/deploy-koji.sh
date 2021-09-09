@@ -242,7 +242,6 @@ weburl = $KOJI_URL/koji
 topurl = $KOJI_URL/kojifiles
 topdir = $KOJI_DIR
 cert = ~/.koji/client.crt
-ca = ~/.koji/clientca.crt
 serverca = ~/.koji/serverca.crt
 anon_retry = true
 EOF
@@ -344,7 +343,6 @@ topdir=$KOJI_DIR
 logfile=/var/log/kojira.log
 with_src=no
 cert = $KOJI_PKI_DIR/kojira.pem
-ca = $KOJI_PKI_DIR/koji_ca_cert.crt
 serverca = $KOJI_PKI_DIR/koji_ca_cert.crt
 EOF
 
