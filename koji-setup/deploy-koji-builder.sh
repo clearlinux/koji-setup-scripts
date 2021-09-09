@@ -41,7 +41,6 @@ topurl=$KOJI_URL/kojifiles
 use_createrepo_c=True
 allowed_scms=$GIT_FQDN:/packages/*
 cert = $KOJI_PKI_DIR/$KOJI_SLAVE_FQDN.pem
-ca = $KOJI_PKI_DIR/koji_ca_cert.crt
 serverca = $KOJI_PKI_DIR/koji_ca_cert.crt
 EOF
 
