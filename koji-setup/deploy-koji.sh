@@ -341,7 +341,6 @@ cat > /etc/kojira/kojira.conf <<- EOF
 server=$KOJI_URL/kojihub
 topdir=$KOJI_DIR
 logfile=/var/log/kojira.log
-with_src=no
 cert = $KOJI_PKI_DIR/kojira.pem
 serverca = $KOJI_PKI_DIR/koji_ca_cert.crt
 EOF
