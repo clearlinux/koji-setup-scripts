@@ -183,7 +183,7 @@ EOF
 
 mkdir -p /etc/httpd/conf.d
 cat > /etc/httpd/conf.d/kojihub.conf <<- EOF
-Alias /kojihub /usr/share/koji-hub/kojixmlrpc.py
+Alias /kojihub /usr/share/koji-hub/kojiapp.py
 <Directory "/usr/share/koji-hub">
     Options ExecCGI
     SetHandler wsgi-script
