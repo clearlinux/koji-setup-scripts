@@ -188,6 +188,8 @@ Alias /kojihub /usr/share/koji-hub/kojiapp.py
     Options ExecCGI
     SetHandler wsgi-script
     Require all granted
+    WSGIApplicationGroup %{GLOBAL}
+    WSGIScriptReloading Off
 </Directory>
 Alias /kojifiles "$KOJI_DIR"
 <Directory "$KOJI_DIR">
@@ -221,8 +223,11 @@ EOF
 mkdir -p /etc/httpd/conf.d
 cat > /etc/httpd/conf.d/kojiweb.conf <<- EOF
 Alias /koji "/usr/share/koji-web/scripts/wsgi_publisher.py"
+WSGIDaemonProcess koji lang=C.UTF-8
 <Directory "/usr/share/koji-web/scripts">
     Options ExecCGI
+    WSGIProcessGroup koji
+    WSGIApplicationGroup %{GLOBAL}
     SetHandler wsgi-script
     Require all granted
 </Directory>
