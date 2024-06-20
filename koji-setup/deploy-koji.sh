@@ -147,7 +147,7 @@ useradd -r koji
 # Setup PostgreSQL and populate schema
 sudo -u "$POSTGRES_USER" createuser --no-superuser --no-createrole --no-createdb koji
 sudo -u "$POSTGRES_USER" createdb -O koji koji
-sudo -u koji psql koji koji < /usr/share/doc/koji*/docs/schema.sql
+sudo -u koji psql koji koji < /usr/share/koji/schema.sql
 
 # Authorize Koji-web and Koji-hub resources
 cat > "$POSTGRES_DEFAULT_DIR"/data/pg_hba.conf <<- EOF
