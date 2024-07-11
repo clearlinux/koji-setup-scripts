@@ -4,12 +4,13 @@
 
 KOJI_USER="$1"
 CERT_SUBJECT="$2"
+CERT_EXT="$3"
 
 openssl genrsa -out private/"$KOJI_USER".key 2048
 if [ -z "$CERT_SUBJECT" ]; then
 	openssl req -config ssl.cnf -new -nodes -out certs/"$KOJI_USER".csr -key private/"$KOJI_USER".key
 else
-	openssl req -subj "$CERT_SUBJECT" -config ssl.cnf -new -nodes -out certs/"$KOJI_USER".csr -key private/"$KOJI_USER".key
+	openssl req -subj "$CERT_SUBJECT" -addext "$CERT_EXT" -config ssl.cnf -new -nodes -out certs/"$KOJI_USER".csr -key private/"$KOJI_USER".key
 fi
 openssl ca -batch -config ssl.cnf -keyfile private/koji_ca_cert.key -cert koji_ca_cert.crt -out certs/"$KOJI_USER".crt -outdir certs -infiles certs/"$KOJI_USER".csr
 cat certs/"$KOJI_USER".crt private/"$KOJI_USER".key > "$KOJI_USER".pem

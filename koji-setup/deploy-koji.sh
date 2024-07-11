@@ -44,6 +44,7 @@ default_crl_days        = 30
 default_md              = sha512
 preserve                = no
 policy                  = policy_match
+copy_extensions         = copy
 
 [policy_match]
 countryName             = match
@@ -90,14 +91,19 @@ authorityKeyIdentifier          = keyid,issuer:always
 [v3_ca]
 subjectKeyIdentifier            = hash
 authorityKeyIdentifier          = keyid:always,issuer:always
-basicConstraints                = CA:true
+basicConstraints                = CA:TRUE
+subjectAltName                  = @alternate_names
+
+[alternate_names]
+DNS.1                           = $KOJI_MASTER_FQDN
+IP.1                            = $KOJI_MASTER_IP
 EOF
 
 # Generate and trust CA
 touch "$KOJI_PKI_DIR"/index.txt
 echo 01 > "$KOJI_PKI_DIR"/serial
 openssl genrsa -out "$KOJI_PKI_DIR"/private/koji_ca_cert.key 2048
-openssl req -subj "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=koji_ca/CN=$KOJI_MASTER_FQDN" -config "$KOJI_PKI_DIR"/ssl.cnf -new -x509 -days 3650 -key "$KOJI_PKI_DIR"/private/koji_ca_cert.key -out "$KOJI_PKI_DIR"/koji_ca_cert.crt -extensions v3_ca
+openssl req -subj "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=koji_ca/CN=$KOJI_MASTER_FQDN" -addext "subjectAltName=DNS:$KOJI_MASTER_FQDN,IP:$KOJI_MASTER_IP" -config "$KOJI_PKI_DIR"/ssl.cnf -new -x509 -days 3650 -key "$KOJI_PKI_DIR"/private/koji_ca_cert.key -out "$KOJI_PKI_DIR"/koji_ca_cert.crt -extensions v3_ca
 mkdir -p /etc/ca-certs/trusted
 cp -a "$KOJI_PKI_DIR"/koji_ca_cert.crt /etc/ca-certs/trusted
 while true; do
@@ -109,10 +115,10 @@ done
 # Generate the koji component certificates and the admin certificate and generate a PKCS12 user certificate (for web browser)
 cp "$SCRIPT_DIR"/gencert.sh "$KOJI_PKI_DIR"
 pushd "$KOJI_PKI_DIR"
-./gencert.sh kojiweb "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=kojiweb/CN=$KOJI_MASTER_FQDN"
-./gencert.sh kojihub "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=kojihub/CN=$KOJI_MASTER_FQDN"
-./gencert.sh kojiadmin "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=$ORG_UNIT/CN=kojiadmin"
-./gencert.sh kojira "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=$ORG_UNIT/CN=kojira"
+./gencert.sh kojiweb "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=kojiweb/CN=$KOJI_MASTER_FQDN" "subjectAltName=DNS:$KOJI_MASTER_FQDN,IP:$KOJI_MASTER_IP"
+./gencert.sh kojihub "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=kojihub/CN=$KOJI_MASTER_FQDN" "subjectAltName=DNS:$KOJI_MASTER_FQDN,IP:$KOJI_MASTER_IP"
+./gencert.sh kojiadmin "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=$ORG_UNIT/CN=kojiadmin" "subjectAltName=DNS:kojiadmin,IP:$KOJI_MASTER_IP"
+./gencert.sh kojira "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/OU=$ORG_UNIT/CN=kojira" "subjectAltName=DNS:kojira,IP:$KOJI_MASTER_IP"
 popd
 
 # Copy certificates into ~/.koji for kojiadmin
@@ -326,7 +332,7 @@ sudo -u kojiadmin koji edit-host --capacity="$KOJID_CAPACITY" "$KOJI_SLAVE_FQDN"
 
 # Generate certificates
 pushd "$KOJI_PKI_DIR"
-./gencert.sh "$KOJI_SLAVE_FQDN" "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/CN=$KOJI_SLAVE_FQDN"
+./gencert.sh "$KOJI_SLAVE_FQDN" "/C=$COUNTRY_CODE/ST=$STATE/L=$LOCATION/O=$ORGANIZATION/CN=$KOJI_SLAVE_FQDN" "subjectAltName=DNS:$KOJI_SLAVE_FQDN,IP:$KOJI_SLAVE_IP"
 popd
 
 if [[ "$KOJI_SLAVE_FQDN" = "$KOJI_MASTER_FQDN" ]]; then
